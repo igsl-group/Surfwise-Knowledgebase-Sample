@@ -22,6 +22,12 @@ connectable immediately. This service is a working reference of that contract.
 - Token auth (`Authorization: Token <id>:<secret>`), tokens hashed at rest
 - Incremental sync support via `filter[updated_at:gt]` (drives SurfWise re-indexing)
 - Alembic migrations, seed data, health check, OpenAPI docs at `/docs`
+- API token management (`/api/tokens`): create / list / rotate / delete, with **admin vs
+  read-only** scopes (give SurfWise a read-only token)
+- Document **upload / download / delete** + web GUI (`/ui`, HTTP Basic protected) with
+  menu views, a modal document viewer, and paginated lists
+- Hardening: sanitized Markdown (XSS-safe), constant-time token compare, upload size
+  cap, and a DB-backed `/health` probe
 
 ## Quick start
 ```bash
@@ -39,6 +45,8 @@ Add a **BookStack** connector in a SurfWise search space with:
 - **Token ID**: `KB_DEFAULT_TOKEN_ID` (default `kb_demo_token_id`)
 - **Token Secret**: `KB_DEFAULT_TOKEN_SECRET` (default `kb_demo_token_secret`)
 
+> Recommended: create a dedicated **read-only** token (GUI **API Tokens** tab, leave *admin* unchecked) for the connector.
+
 Trigger indexing; SurfWise pulls pages, exports each as Markdown, chunks + embeds them,
 and they become searchable/usable by the SurfWise agent. Editing a page bumps its
 `updated_at`, so incremental re-index picks up only changes.
@@ -51,6 +59,7 @@ and they become searchable/usable by the SurfWise agent. Editing a page bumps it
 | `KB_PUBLIC_BASE_URL` | `http://localhost:8090` | Human-facing base URL |
 | `KB_SEED_ON_STARTUP` | `true` | Seed token + sample content on boot |
 | `KB_UI_USERNAME` / `KB_UI_PASSWORD` | `admin` / `surfwise-kb-admin` | HTTP Basic login for the `/ui` admin console |
+| `KB_MAX_UPLOAD_MB` | `50` | Max size (MB) per uploaded document |
 | `KB_HOST_PORT` (compose) | `8090` | Host port mapping |
 
 ## Content management API (examples)
@@ -62,6 +71,12 @@ curl -X POST localhost:8090/api/books -H "$AUTH" -H 'Content-Type: application/j
 # create a page (Markdown body)
 curl -X POST localhost:8090/api/pages -H "$AUTH" -H 'Content-Type: application/json' \
   -d '{"book_id":1,"name":"Restart Service","markdown":"# Restart\n\n..."}'
+```
+
+Create a read-only API token for the SurfWise connector:
+```bash
+curl -X POST localhost:8090/api/tokens -H "$AUTH" -H 'Content-Type: application/json' \
+  -d '{"name":"surfwise-connector","is_admin":false}'   # returns token_id + secret (once)
 ```
 
 ## Tests
@@ -82,12 +97,25 @@ kb-service/
 │   ├── markdown_utils.py  # slugify + Markdown->HTML
 │   ├── seed.py            # default token + sample content
 │   ├── main.py            # FastAPI app
-│   └── routers/           # health, books, pages (BookStack-compat + CRUD)
-├── migrations/            # Alembic (async env) + 0001_init
-├── tests/                 # pytest (BookStack contract + CRUD)
+│   ├── routers/           # health, books, pages, documents, tokens, ui, manual
+│   └── manual.py          # admin connection guide (served at /manual)
+├── migrations/            # Alembic: 0001_init, 0002_document_files, 0003_token_admin
+├── tests/                 # pytest: BookStack contract, CRUD, documents, tokens, authz
 ├── Dockerfile, docker-compose.yml, entrypoint.sh
 └── pyproject.toml, .env.example
 ```
+
+## Security model
+- **API auth**: `Authorization: Token <id>:<secret>`; secrets stored SHA-256-hashed,
+  compared in constant time.
+- **Scopes**: admin tokens may read + write + manage tokens; **read-only** tokens can
+  only read (recommended for the SurfWise connector). Writes return 403 for read-only.
+- **Admin UI**: `/ui` is gated by HTTP Basic (`KB_UI_USERNAME`/`KB_UI_PASSWORD`).
+- **XSS**: Markdown is rendered then sanitized (allowlist) before display.
+- **Limits**: per-file upload cap (`KB_MAX_UPLOAD_MB`); safe `Content-Disposition` for
+  non-ASCII filenames.
+- For production: serve over **HTTPS**, replace the demo token/UI password, and consider
+  object storage for large files.
 
 ## Notes for adapting your own DMS/CMS
 This service is a reference. To make an existing DMS/CMS connectable, expose the same

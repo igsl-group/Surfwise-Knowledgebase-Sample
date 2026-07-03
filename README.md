@@ -45,20 +45,26 @@ First boot runs DB migrations and seeds a demo API token + sample content.
 Set a different host port with `KB_HOST_PORT=9000 docker compose up -d`.
 
 ## What the KB service provides
-- **Document management GUI** (`/ui`): create books, upload files, view rendered
-  Markdown, download (with progress + original filenames incl. non-ASCII/CJK), delete.
+- **Admin web GUI** (`/ui`, HTTP Basic login) with menu sections — **Documents**
+  (upload, view in a modal, download with progress, delete; paginated), **API Tokens**,
+  **Docs**, and **Settings**.
 - **BookStack-compatible connector API** (what SurfWise indexes):
   `GET /api/pages` (paginated, `filter[updated_at:gt]`, `sort`), `GET /api/pages/{id}`,
   `GET /api/pages/{id}/export/markdown`, `GET /api/books/{id}`.
 - **Content CRUD & documents API**: `POST/PUT/DELETE /api/books` and `/api/pages`;
   `POST /api/documents/upload`, `GET /api/documents`, `GET /api/documents/{id}/download`.
-- Token auth (hashed at rest), Alembic migrations, seed data, pytest suite, OpenAPI.
+- **API token management** (`/api/tokens`): create / list / rotate / delete, with
+  **admin vs read-only scopes** — give SurfWise a **read-only** (index-only) token.
+- **Security & ops**: token secrets hashed + constant-time compare, HTTP-Basic-protected
+  `/ui`, sanitized Markdown rendering (XSS-safe), upload size limit, DB-backed `/health`,
+  Alembic migrations, seed data, pytest suite, OpenAPI.
 
 ## Connect it to SurfWise (summary)
 In a SurfWise Search Space → **Manage Connectors → BookStack**:
 - **Base URL**: `http://host.docker.internal:8090` (same Docker host as SurfWise) or
   `http://<KB_HOST>:8090` (must be reachable from the SurfWise backend)
 - **Token ID / Secret**: as above
+- **Recommended:** create a dedicated **read-only** token (API Tokens tab, leave *admin* unchecked) — SurfWise only needs read access.
 
 Then **Index now** (optionally enable periodic indexing). Full walkthrough:
 [`docs/connect-surfwise-admin-guide.md`](docs/connect-surfwise-admin-guide.md)
