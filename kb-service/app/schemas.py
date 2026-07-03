@@ -51,3 +51,28 @@ class PageRead(BaseModel):
     markdown: str
     created_at: datetime
     updated_at: datetime
+
+
+class TokenCreate(BaseModel):
+    name: str
+    token_id: str | None = None
+    secret: str | None = None
+
+
+class TokenUpdate(BaseModel):
+    name: str | None = None
+
+
+class TokenRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    token_id: str
+    created_at: datetime
+
+
+class TokenCreated(BaseModel):
+    id: int
+    name: str
+    token_id: str
+    secret: str

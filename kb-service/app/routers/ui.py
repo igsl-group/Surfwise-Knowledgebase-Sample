@@ -46,7 +46,7 @@ _PAGE = """<!doctype html>
 <header>
   <h1>Knowledge Base &mdash; Document Management</h1>
   <small>Upload, download and delete documents. Content is indexable by SurfWise via the BookStack-compatible API.</small>
-  <div style="margin-top:8px;font-size:13px"><a href="/manual" target="_blank" style="color:#93c5fd;font-weight:600">&#128214; How to connect this KB to SurfWise (Admin Guide)</a> &nbsp;&middot;&nbsp; <a href="/docs" target="_blank" style="color:#93c5fd">API docs</a></div>
+  <div style="margin-top:8px;font-size:13px"><a href="/manual" target="_blank" style="color:#93c5fd;font-weight:600">&#128214; How to connect this KB to SurfWise (Admin Guide)</a> &nbsp;&middot;&nbsp; <a href="/docs" target="_blank" style="color:#93c5fd">API docs</a> &nbsp;&middot;&nbsp; <a href="https://github.com/igsl-group/Surfwise-Knowledgebase-Sample" target="_blank" style="color:#93c5fd">GitHub repo</a></div>
 </header>
 <main>
   <div class="card">
@@ -95,6 +95,22 @@ _PAGE = """<!doctype html>
     <table>
       <thead><tr><th>Name</th><th>Book</th><th>Type</th><th>Size</th><th>Updated</th><th>Actions</th></tr></thead>
       <tbody id="docs"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <strong>API Tokens</strong>
+      <button class="sec" onclick="loadTokens()">Refresh</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div><div><label>New token name</label></div><input id="tokname" type="text" placeholder="e.g. surfwise-connector"/></div>
+      <button onclick="createToken()">Create token</button>
+    </div>
+    <div id="newtok" style="display:none;margin-top:10px;padding:10px;border:1px dashed #16a34a;border-radius:8px;background:#f0fdf4"></div>
+    <table>
+      <thead><tr><th>Name</th><th>Token ID</th><th>Created</th><th>Actions</th></tr></thead>
+      <tbody id="toks"></tbody>
     </table>
   </div>
 
@@ -197,9 +213,33 @@ async function del(id){
   const r = await api('/api/documents/'+id, {method:'DELETE'});
   if(r.status===204){ msg('Deleted.', true); loadDocs(); } else { msg('Delete failed: '+r.status, false); }
 }
+async function loadTokens(){
+  const r = await api('/api/tokens'); const d = await r.json();
+  const tb=$('toks'); tb.innerHTML='';
+  (d||[]).forEach(t=>{ const tr=document.createElement('tr');
+    tr.innerHTML='<td>'+esc(t.name)+'</td><td><code>'+esc(t.token_id)+'</code></td>'+
+      '<td>'+(t.created_at||'').slice(0,19).replace('T',' ')+'</td>'+
+      '<td><a class="dl" style="color:#dc2626" onclick="delToken('+t.id+')">Delete</a></td>';
+    tb.appendChild(tr); });
+}
+async function createToken(){
+  const name=$('tokname').value.trim(); if(!name){ msg('Enter a token name.', false); return; }
+  const r=await api('/api/tokens',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+  if(r.status===201){ const t=await r.json(); const full=t.token_id+':'+t.secret;
+    const box=$('newtok'); box.style.display='block';
+    box.innerHTML='<strong>New token &mdash; copy now, the secret is shown only once:</strong><br><code style="user-select:all;font-size:13px">'+esc(full)+'</code>';
+    $('tokname').value=''; loadTokens(); msg('Token created.', true);
+  } else { const e=await r.text(); msg('Create failed: '+r.status+' '+e, false); }
+}
+async function delToken(id){
+  if(!confirm('Delete this token? Apps/connectors using it will lose access.')) return;
+  const r=await api('/api/tokens/'+id,{method:'DELETE'});
+  if(r.status===204){ msg('Token deleted.', true); loadTokens(); }
+  else { const e=await r.text(); msg('Delete failed: '+r.status+' '+e, false); }
+}
 async function init(){
   if(!tok()){ msg('Enter and save an API token to begin (default demo token is pre-filled).', false); return; }
-  try{ await loadBooks(); await loadDocs(); msg('Ready.', true); }catch(e){}
+  try{ await loadBooks(); await loadDocs(); await loadTokens(); msg('Ready.', true); }catch(e){}
 }
 $('token').value = tok() || 'kb_demo_token_id:kb_demo_token_secret';
 if(!tok()) localStorage.setItem('kb_token', $('token').value);

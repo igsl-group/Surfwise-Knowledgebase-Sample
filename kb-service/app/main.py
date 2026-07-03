@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
 from app.config import get_settings
-from app.routers import books, documents, health, pages, ui
+from app.routers import books, documents, health, pages, tokens, ui
 
 settings = get_settings()
 logging.basicConfig(level=settings.log_level.upper())
@@ -39,6 +39,7 @@ app.include_router(health.router)
 app.include_router(books.router)
 app.include_router(pages.router)
 app.include_router(documents.router)
+app.include_router(tokens.router)
 app.include_router(ui.router)
 
 
