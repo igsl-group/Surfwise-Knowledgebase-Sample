@@ -160,8 +160,11 @@ async function view(id){
 async function downloadDoc(id){
   const r = await api('/api/documents/'+id+'/download');
   if(!r.ok){ msg('Download failed: '+r.status, false); return; }
-  const cd = r.headers.get('Content-Disposition')||''; let fn='document';
-  const m = cd.match(/filename="?([^"]+)"?/); if(m) fn=m[1];
+  let fn='document';
+  const cd = r.headers.get('Content-Disposition')||'';
+  let m = cd.match(/filename[*]=UTF-8''([^;]+)/i);
+  if(m){ try{ fn=decodeURIComponent(m[1]); }catch(e){ fn=m[1]; } }
+  else { m = cd.match(/filename="?([^";]+)"?/i); if(m) fn=m[1]; }
   const blob = await r.blob(); const url = URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download=fn; a.style.display='none'; document.body.appendChild(a); a.click(); msg('Downloaded '+fn, true); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 2000);
 }
