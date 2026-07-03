@@ -7,7 +7,7 @@ from app.markdown_utils import render_html, slugify
 from app.models import ApiToken, Book, Page
 from app.routers._serializers import iso, page_stub, parse_filter_dt
 from app.schemas import PageCreate, PageRead, PageUpdate
-from app.security import require_token
+from app.security import require_admin_token, require_token
 
 router = APIRouter(prefix="/api/pages", tags=["pages"])
 
@@ -115,7 +115,7 @@ async def export_page_html(
 async def create_page(
     payload: PageCreate,
     session: AsyncSession = Depends(get_session),
-    _: ApiToken = Depends(require_token),
+    _: ApiToken = Depends(require_admin_token),
 ) -> Page:
     book = (
         await session.execute(select(Book).where(Book.id == payload.book_id))
@@ -142,7 +142,7 @@ async def update_page(
     page_id: int,
     payload: PageUpdate,
     session: AsyncSession = Depends(get_session),
-    _: ApiToken = Depends(require_token),
+    _: ApiToken = Depends(require_admin_token),
 ) -> Page:
     page = await _get_page(session, page_id)
     if payload.book_id is not None:
@@ -166,7 +166,7 @@ async def update_page(
 async def delete_page(
     page_id: int,
     session: AsyncSession = Depends(get_session),
-    _: ApiToken = Depends(require_token),
+    _: ApiToken = Depends(require_admin_token),
 ) -> None:
     page = await _get_page(session, page_id)
     await session.delete(page)

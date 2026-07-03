@@ -7,7 +7,7 @@ from app.markdown_utils import slugify
 from app.models import ApiToken, Book
 from app.routers._serializers import book_stub, page_stub
 from app.schemas import BookCreate, BookRead, BookUpdate
-from app.security import require_token
+from app.security import require_admin_token, require_token
 
 router = APIRouter(prefix="/api/books", tags=["books"])
 
@@ -19,6 +19,18 @@ async def _get_book(session: AsyncSession, book_id: int) -> Book:
     if book is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Book not found")
     return book
+
+
+async def _unique_book_slug(session: AsyncSession, base: str, exclude_id: int | None = None) -> str:
+    slug, n = base, 1
+    while True:
+        stmt = select(Book.id).where(Book.slug == slug)
+        if exclude_id is not None:
+            stmt = stmt.where(Book.id != exclude_id)
+        if (await session.execute(stmt)).first() is None:
+            return slug
+        n += 1
+        slug = f"{base}-{n}"
 
 
 @router.get("")
@@ -44,11 +56,8 @@ async def get_book(
     _: ApiToken = Depends(require_token),
 ) -> dict:
     book = await _get_book(session, book_id)
-    pages = (
-        await session.execute(select(Book).where(Book.id == book_id))
-    ).scalar_one()
     data = book_stub(book)
-    data["contents"] = [{**page_stub(p), "type": "page"} for p in pages.pages]
+    data["contents"] = [{**page_stub(p), "type": "page"} for p in book.pages]
     return data
 
 
@@ -56,13 +65,10 @@ async def get_book(
 async def create_book(
     payload: BookCreate,
     session: AsyncSession = Depends(get_session),
-    _: ApiToken = Depends(require_token),
+    _: ApiToken = Depends(require_admin_token),
 ) -> Book:
-    book = Book(
-        name=payload.name,
-        description=payload.description,
-        slug=payload.slug or slugify(payload.name),
-    )
+    slug = await _unique_book_slug(session, payload.slug or slugify(payload.name))
+    book = Book(name=payload.name, description=payload.description, slug=slug)
     session.add(book)
     await session.commit()
     await session.refresh(book)
@@ -74,7 +80,7 @@ async def update_book(
     book_id: int,
     payload: BookUpdate,
     session: AsyncSession = Depends(get_session),
-    _: ApiToken = Depends(require_token),
+    _: ApiToken = Depends(require_admin_token),
 ) -> Book:
     book = await _get_book(session, book_id)
     if payload.name is not None:
@@ -82,7 +88,7 @@ async def update_book(
     if payload.description is not None:
         book.description = payload.description
     if payload.slug is not None:
-        book.slug = payload.slug
+        book.slug = await _unique_book_slug(session, payload.slug, exclude_id=book.id)
     await session.commit()
     await session.refresh(book)
     return book
@@ -92,7 +98,7 @@ async def update_book(
 async def delete_book(
     book_id: int,
     session: AsyncSession = Depends(get_session),
-    _: ApiToken = Depends(require_token),
+    _: ApiToken = Depends(require_admin_token),
 ) -> None:
     book = await _get_book(session, book_id)
     await session.delete(book)

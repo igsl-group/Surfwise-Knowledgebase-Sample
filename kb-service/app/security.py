@@ -1,4 +1,5 @@
 import hashlib
+import hmac
 
 from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy import select
@@ -9,7 +10,7 @@ from app.models import ApiToken
 
 
 def hash_secret(secret: str) -> str:
-    """Hash a token secret for at-rest storage (SHA-256)."""
+    """Hash a token secret for at-rest storage (SHA-256 of a high-entropy token)."""
     return hashlib.sha256(secret.encode("utf-8")).hexdigest()
 
 
@@ -17,7 +18,7 @@ async def require_token(
     authorization: str | None = Header(default=None),
     session: AsyncSession = Depends(get_session),
 ) -> ApiToken:
-    """Validate a BookStack-style ``Authorization: Token <id>:<secret>`` header."""
+    """Validate ``Authorization: Token <id>:<secret>`` (any valid token = read access)."""
     if not authorization or not authorization.startswith("Token "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -30,10 +31,25 @@ async def require_token(
             detail="Malformed token. Expected 'Token <id>:<secret>'.",
         )
     token_id, _, secret = raw.partition(":")
-    result = await session.execute(select(ApiToken).where(ApiToken.token_id == token_id))
-    token = result.scalar_one_or_none()
-    if token is None or token.secret_hash != hash_secret(secret):
+    token = (
+        await session.execute(select(ApiToken).where(ApiToken.token_id == token_id))
+    ).scalar_one_or_none()
+    # constant-time comparison; still compute a hash when token is missing to reduce timing signal
+    expected = token.secret_hash if token is not None else hash_secret("")
+    if not hmac.compare_digest(expected, hash_secret(secret)) or token is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API token."
+        )
+    return token
+
+
+async def require_admin_token(
+    token: ApiToken = Depends(require_token),
+) -> ApiToken:
+    """Require an admin-scoped token (write/management operations)."""
+    if not token.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This operation requires an admin API token. Read-only tokens cannot modify data.",
         )
     return token

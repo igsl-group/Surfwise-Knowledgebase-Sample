@@ -14,7 +14,8 @@ RUN pip install --no-cache-dir \
       "pydantic-settings>=2.3" \
       "markdown>=3.6" \
       "python-slugify>=8.0" \
-      "python-multipart>=0.0.9"
+      "python-multipart>=0.0.9" \
+      "bleach>=6.1"
 
 COPY . /srv
 

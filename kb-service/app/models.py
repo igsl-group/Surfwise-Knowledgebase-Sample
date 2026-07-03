@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, Integer, LargeBinary, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, LargeBinary, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -66,3 +66,4 @@ class ApiToken(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     token_id: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     secret_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)

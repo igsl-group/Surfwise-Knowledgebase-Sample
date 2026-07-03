@@ -84,6 +84,7 @@ async def seed() -> None:
                     name=settings.default_token_name,
                     token_id=settings.default_token_id,
                     secret_hash=hash_secret(settings.default_token_secret),
+                    is_admin=True,
                 )
             )
 

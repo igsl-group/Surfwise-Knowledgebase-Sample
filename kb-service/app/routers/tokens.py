@@ -1,5 +1,4 @@
-"""CRUD for API tokens (BookStack-style id:secret). Secrets are stored hashed and
-returned only once at creation/rotation."""
+"""CRUD for API tokens (admin scope). Secrets are stored hashed and shown once."""
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -9,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_session
 from app.models import ApiToken
 from app.schemas import TokenCreate, TokenCreated, TokenRead, TokenUpdate
-from app.security import hash_secret, require_token
+from app.security import hash_secret, require_admin_token, require_token
 
 router = APIRouter(prefix="/api/tokens", tags=["tokens"])
 
@@ -37,7 +36,7 @@ async def list_tokens(
 async def create_token(
     payload: TokenCreate,
     session: AsyncSession = Depends(get_session),
-    _: ApiToken = Depends(require_token),
+    _: ApiToken = Depends(require_admin_token),
 ) -> TokenCreated:
     token_id = (payload.token_id or ("kb_" + secrets.token_hex(6))).strip()
     secret = payload.secret or secrets.token_urlsafe(24)
@@ -46,7 +45,12 @@ async def create_token(
     ).scalar_one_or_none()
     if dup is not None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="token_id already exists")
-    tok = ApiToken(name=payload.name, token_id=token_id, secret_hash=hash_secret(secret))
+    tok = ApiToken(
+        name=payload.name,
+        token_id=token_id,
+        secret_hash=hash_secret(secret),
+        is_admin=payload.is_admin,
+    )
     session.add(tok)
     await session.commit()
     await session.refresh(tok)
@@ -58,7 +62,7 @@ async def update_token(
     tid: int,
     payload: TokenUpdate,
     session: AsyncSession = Depends(get_session),
-    _: ApiToken = Depends(require_token),
+    _: ApiToken = Depends(require_admin_token),
 ) -> ApiToken:
     tok = await _get(session, tid)
     if payload.name is not None:
@@ -72,7 +76,7 @@ async def update_token(
 async def rotate_token(
     tid: int,
     session: AsyncSession = Depends(get_session),
-    _: ApiToken = Depends(require_token),
+    _: ApiToken = Depends(require_admin_token),
 ) -> TokenCreated:
     tok = await _get(session, tid)
     secret = secrets.token_urlsafe(24)
@@ -86,14 +90,18 @@ async def rotate_token(
 async def delete_token(
     tid: int,
     session: AsyncSession = Depends(get_session),
-    _: ApiToken = Depends(require_token),
+    _: ApiToken = Depends(require_admin_token),
 ) -> None:
-    count = (await session.execute(select(func.count(ApiToken.id)))).scalar_one()
-    if count <= 1:
+    admins = (
+        await session.execute(
+            select(func.count(ApiToken.id)).where(ApiToken.is_admin == True)  # noqa: E712
+        )
+    ).scalar_one()
+    tok = await _get(session, tid)
+    if tok.is_admin and admins <= 1:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete the last remaining token (would lock out API access).",
+            detail="Cannot delete the last admin token (would lock out management).",
         )
-    tok = await _get(session, tid)
     await session.delete(tok)
     await session.commit()

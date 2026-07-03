@@ -57,6 +57,7 @@ class TokenCreate(BaseModel):
     name: str
     token_id: str | None = None
     secret: str | None = None
+    is_admin: bool = False
 
 
 class TokenUpdate(BaseModel):
@@ -68,6 +69,7 @@ class TokenRead(BaseModel):
     id: int
     name: str
     token_id: str
+    is_admin: bool
     created_at: datetime
 
 

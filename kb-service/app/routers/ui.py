@@ -105,11 +105,13 @@ _PAGE = """<!doctype html>
     </div>
     <div class="row" style="margin-top:8px">
       <div><div><label>New token name</label></div><input id="tokname" type="text" placeholder="e.g. surfwise-connector"/></div>
+      <label style="align-self:end"><input id="tokadmin" type="checkbox"/> admin (write access)</label>
       <button onclick="createToken()">Create token</button>
     </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:4px">Tip: give SurfWise a <strong>read-only</strong> token (leave &ldquo;admin&rdquo; unchecked) &mdash; it can index but not modify content.</div>
     <div id="newtok" style="display:none;margin-top:10px;padding:10px;border:1px dashed #16a34a;border-radius:8px;background:#f0fdf4"></div>
     <table>
-      <thead><tr><th>Name</th><th>Token ID</th><th>Created</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Name</th><th>Token ID</th><th>Created</th><th>Admin</th><th>Actions</th></tr></thead>
       <tbody id="toks"></tbody>
     </table>
   </div>
@@ -144,7 +146,7 @@ async function loadBooks(){
 }
 async function createBook(){
   const name = $('newbook').value.trim(); if(!name){ msg('Enter a book name.', false); return; }
-  const r = await api('/api/books', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name})});
+  const r = await api('/api/books', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name, is_admin: $('tokadmin').checked})});
   if(r.ok){ $('newbook').value=''; await loadBooks(); msg('Book created.', true); } else { msg('Create failed: '+r.status, false); }
 }
 async function upload(){
@@ -219,12 +221,13 @@ async function loadTokens(){
   (d||[]).forEach(t=>{ const tr=document.createElement('tr');
     tr.innerHTML='<td>'+esc(t.name)+'</td><td><code>'+esc(t.token_id)+'</code></td>'+
       '<td>'+(t.created_at||'').slice(0,19).replace('T',' ')+'</td>'+
+      '<td>'+(t.is_admin?'yes':'no')+'</td>'+
       '<td><a class="dl" style="color:#dc2626" onclick="delToken('+t.id+')">Delete</a></td>';
     tb.appendChild(tr); });
 }
 async function createToken(){
   const name=$('tokname').value.trim(); if(!name){ msg('Enter a token name.', false); return; }
-  const r=await api('/api/tokens',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+  const r=await api('/api/tokens',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name, is_admin: $('tokadmin').checked})});
   if(r.status===201){ const t=await r.json(); const full=t.token_id+':'+t.secret;
     const box=$('newtok'); box.style.display='block';
     box.innerHTML='<strong>New token &mdash; copy now, the secret is shown only once:</strong><br><code style="user-select:all;font-size:13px">'+esc(full)+'</code>';

@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     default_token_secret: str = "kb_demo_token_secret"
     default_token_name: str = "default-demo-token"
     seed_on_startup: bool = True
+    max_upload_mb: int = 50
     log_level: str = "INFO"
 
 

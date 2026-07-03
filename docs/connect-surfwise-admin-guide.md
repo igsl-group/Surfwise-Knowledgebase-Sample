@@ -17,6 +17,8 @@ This Knowledge Base exposes a **BookStack-compatible API**, so SurfWise's built-
 - Demo Token ID: `kb_demo_token_id`
 - Demo Token Secret: `kb_demo_token_secret`
 
+For production, create a dedicated **read-only** token in this KB (GUI: **API Tokens**, leave *admin* unchecked). SurfWise only needs read access to index content, so a read-only token is recommended.
+
 Quick reachability test (run from the SurfWise server):
 ```
 curl -H "Authorization: Token <TOKEN_ID>:<TOKEN_SECRET>" http://<KB_HOST>:8090/api/pages

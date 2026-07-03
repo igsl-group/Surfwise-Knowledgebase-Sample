@@ -31,7 +31,7 @@ async def client():
     async with maker() as s:
         s.add(
             models.ApiToken(
-                name="test", token_id=TOKEN_ID, secret_hash=hash_secret(TOKEN_SECRET)
+                name="test", token_id=TOKEN_ID, secret_hash=hash_secret(TOKEN_SECRET), is_admin=True
             )
         )
         book = models.Book(name="Handbook", slug="handbook", description="d")
