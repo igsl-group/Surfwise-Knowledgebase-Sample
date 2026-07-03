@@ -92,3 +92,19 @@ kb-service/
 This service is a reference. To make an existing DMS/CMS connectable, expose the same
 read contract (token auth; paginated + `updated_at`-filterable list with stable IDs;
 Markdown export per item). See the integration guide in `../docs/`.
+
+## Document management + Web GUI
+Beyond page CRUD, the service supports file **upload / download / delete** with a
+built-in web GUI (no extra service):
+
+- **GUI**: open `http://<host>:8090/ui` — enter the API token (demo token pre-filled),
+  pick/create a book, upload files, then View / Download / Delete documents.
+- **API**:
+  - `POST /api/documents/upload` (multipart: `file`, `book_id`, optional `name`)
+  - `GET /api/documents` (list with file metadata)
+  - `GET /api/documents/{id}/download` (original bytes, or Markdown for page-only docs)
+  - `DELETE /api/documents/{id}`
+
+Uploaded text files (`.md/.txt/.csv/...`) have their content stored as the page
+Markdown, so they are immediately indexable by SurfWise via the BookStack API; binary
+files are stored for download with an indexable placeholder note.

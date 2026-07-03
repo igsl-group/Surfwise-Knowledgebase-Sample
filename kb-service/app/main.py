@@ -2,9 +2,10 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 
 from app.config import get_settings
-from app.routers import books, health, pages
+from app.routers import books, documents, health, pages, ui
 
 settings = get_settings()
 logging.basicConfig(level=settings.log_level.upper())
@@ -19,17 +20,17 @@ async def lifespan(app: FastAPI):
 
             await seed()
             logger.info("Seed complete.")
-        except Exception as exc:  # noqa: BLE001 - startup should not crash on seed
+        except Exception as exc:  # noqa: BLE001
             logger.warning("Seed skipped/failed: %s", exc)
     yield
 
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.1.0",
+    version="0.2.0",
     description=(
-        "A SurfWise-compatible Knowledge Base. Exposes a BookStack-compatible API "
-        "so SurfWise's native BookStack connector can index it, plus CRUD for content."
+        "A SurfWise-compatible Knowledge Base. BookStack-compatible API so SurfWise's "
+        "native connector can index it, plus content CRUD and a document-management GUI."
     ),
     lifespan=lifespan,
 )
@@ -37,8 +38,10 @@ app = FastAPI(
 app.include_router(health.router)
 app.include_router(books.router)
 app.include_router(pages.router)
+app.include_router(documents.router)
+app.include_router(ui.router)
 
 
-@app.get("/", tags=["system"])
-async def root() -> dict:
-    return {"service": settings.app_name, "docs": "/docs", "health": "/health"}
+@app.get("/", include_in_schema=False)
+async def root() -> RedirectResponse:
+    return RedirectResponse(url="/ui")

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Integer, LargeBinary, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -48,6 +48,11 @@ class Page(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     slug: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     markdown: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    # Optional original uploaded file (document management).
+    original_filename: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    content_type: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    file_data: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
 
     book: Mapped["Book"] = relationship(back_populates="pages", lazy="joined")
 

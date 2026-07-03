@@ -13,7 +13,8 @@ RUN pip install --no-cache-dir \
       "pydantic>=2.7" \
       "pydantic-settings>=2.3" \
       "markdown>=3.6" \
-      "python-slugify>=8.0"
+      "python-slugify>=8.0" \
+      "python-multipart>=0.0.9"
 
 COPY . /srv
 
