@@ -50,6 +50,10 @@ _PAGE = """<!doctype html>
   .btn-dl:hover{background:#2563eb;color:#fff;border-color:#2563eb}
   .btn-del{color:#dc2626;border-color:#fecaca;background:#fef2f2}
   .btn-del:hover{background:#dc2626;color:#fff;border-color:#dc2626}
+  .nav{display:flex;gap:4px;background:#fff;border-bottom:1px solid var(--line);padding:0 18px}
+  .navlink{padding:12px 16px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;user-select:none}
+  .navlink:hover{color:var(--fg)}
+  .navlink.active{color:var(--brand);border-bottom-color:var(--brand)}
 </style>
 </head>
 <body>
@@ -58,8 +62,13 @@ _PAGE = """<!doctype html>
   <small>Upload, download and delete documents. Content is indexable by SurfWise via the BookStack-compatible API.</small>
   <div style="margin-top:8px;font-size:13px"><a href="/manual" target="_blank" style="color:#93c5fd;font-weight:600">&#128214; How to connect this KB to SurfWise (Admin Guide)</a> &nbsp;&middot;&nbsp; <a href="/docs" target="_blank" style="color:#93c5fd">API docs</a> &nbsp;&middot;&nbsp; <a href="https://github.com/igsl-group/Surfwise-Knowledgebase-Sample" target="_blank" style="color:#93c5fd">GitHub repo</a></div>
 </header>
+<nav class="nav">
+  <a class="navlink" id="nav-docs" onclick="showView('docs')">Documents</a>
+  <a class="navlink" id="nav-tokens" onclick="showView('tokens')">API Tokens</a>
+  <a class="navlink" id="nav-settings" onclick="showView('settings')">Settings</a>
+</nav>
 <main>
-  <div class="card">
+  <div class="card" id="card-settings">
     <div class="row">
       <div>
         <div><label>API token (id:secret)</label></div>
@@ -70,7 +79,7 @@ _PAGE = """<!doctype html>
     </div>
   </div>
 
-  <div class="card">
+  <div class="card" id="card-upload">
     <div class="row">
       <div>
         <div><label>Book</label></div>
@@ -97,7 +106,7 @@ _PAGE = """<!doctype html>
     <p id="msg"></p>
   </div>
 
-  <div class="card">
+  <div class="card" id="card-docs">
     <div class="row" style="justify-content:space-between">
       <strong>Documents</strong>
       <button class="sec" onclick="loadDocs()">Refresh</button>
@@ -108,7 +117,7 @@ _PAGE = """<!doctype html>
     </table>
   </div>
 
-  <div class="card">
+  <div class="card" id="card-tokens">
     <div class="row" style="justify-content:space-between">
       <strong>API Tokens</strong>
       <button class="sec" onclick="loadTokens()">Refresh</button>
@@ -255,9 +264,21 @@ async function delToken(id){
   if(r.status===204){ msg('Token deleted.', true); loadTokens(); }
   else { const e=await r.text(); msg('Delete failed: '+r.status+' '+e, false); }
 }
+function showView(v){
+  ['card-settings','card-upload','card-docs','card-tokens'].forEach(id=>{ const e=$(id); if(e) e.style.display='none'; });
+  const show=(id)=>{ const e=$(id); if(e) e.style.display=''; };
+  if(v==='docs'){ show('card-upload'); show('card-docs'); }
+  else if(v==='tokens'){ show('card-tokens'); }
+  else if(v==='settings'){ show('card-settings'); }
+  if($('viewcard')) $('viewcard').style.display='none';
+  document.querySelectorAll('.navlink').forEach(a=>a.classList.remove('active'));
+  const na=$('nav-'+v); if(na) na.classList.add('active');
+  if(v==='docs') loadDocs();
+  if(v==='tokens') loadTokens();
+}
 async function init(){
   if(!tok()){ msg('Enter and save an API token to begin (default demo token is pre-filled).', false); return; }
-  try{ await loadBooks(); await loadDocs(); await loadTokens(); msg('Ready.', true); }catch(e){}
+  try{ await loadBooks(); showView('docs'); msg('Ready.', true); }catch(e){}
 }
 $('token').value = tok() || 'kb_demo_token_id:kb_demo_token_secret';
 if(!tok()) localStorage.setItem('kb_token', $('token').value);
