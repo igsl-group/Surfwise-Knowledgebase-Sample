@@ -16,6 +16,8 @@ from fastapi import (
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from urllib.parse import quote
+
 from app.database import get_session
 from app.markdown_utils import slugify
 from app.models import ApiToken, Book, Page
@@ -106,6 +108,15 @@ async def upload_document(
     return _doc_info(page)
 
 
+def _content_disposition(filename: str) -> str:
+    """Build a latin-1-safe Content-Disposition (RFC 5987) for any filename."""
+    ascii_name = filename.encode("ascii", "ignore").decode().strip() or "download"
+    return (
+        f'attachment; filename="{ascii_name}"; '
+        f"filename*=UTF-8''{quote(filename)}"
+    )
+
+
 @router.get("/{page_id}/download")
 async def download_document(
     page_id: int,
@@ -122,12 +133,12 @@ async def download_document(
         return Response(
             content=page.file_data,
             media_type=page.content_type or "application/octet-stream",
-            headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+            headers={"Content-Disposition": _content_disposition(fname)},
         )
     return Response(
         content=page.markdown.encode("utf-8"),
         media_type="text/markdown; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="{page.slug}.md"'},
+        headers={"Content-Disposition": _content_disposition(page.slug + ".md")},
     )
 
 
