@@ -54,6 +54,11 @@ _PAGE = """<!doctype html>
   .navlink{padding:12px 16px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;user-select:none}
   .navlink:hover{color:var(--fg)}
   .navlink.active{color:var(--brand);border-bottom-color:var(--brand)}
+  button.sec[disabled]{opacity:.5;cursor:not-allowed}
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px}
+  .modal{background:#fff;border-radius:12px;max-width:840px;width:100%;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 12px 44px rgba(0,0,0,.32)}
+  .modal-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line)}
+  .modal-body{padding:18px;overflow:auto}
 </style>
 </head>
 <body>
@@ -115,6 +120,7 @@ _PAGE = """<!doctype html>
       <thead><tr><th>Name</th><th>Book</th><th>Type</th><th>Size</th><th>Updated</th><th>Actions</th></tr></thead>
       <tbody id="docs"></tbody>
     </table>
+    <div id="docpager" style="margin-top:12px;display:flex;align-items:center"></div>
   </div>
 
   <div class="card" id="card-tokens">
@@ -144,12 +150,11 @@ _PAGE = """<!doctype html>
     </ul>
   </div>
 
-  <div class="card" id="viewcard" style="display:none">
-    <div class="row" style="justify-content:space-between">
-      <strong id="viewtitle">Preview</strong>
-      <button class="sec" onclick="document.getElementById('viewcard').style.display='none'">Close</button>
+  <div id="modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-head"><strong id="viewtitle">Preview</strong><button class="sec" onclick="closeModal()">Close</button></div>
+      <div id="viewer" class="modal-body"></div>
     </div>
-    <div id="viewer"></div>
   </div>
 </main>
 <script>
@@ -189,10 +194,15 @@ async function upload(){
   if(r.ok){ $('file').value=''; $('title').value=''; msg('Uploaded.', true); loadDocs(); }
   else { const e = await r.text(); msg('Upload failed: '+r.status+' '+e, false); }
 }
+let docPage = 0;
+const DOC_PAGE_SIZE = 10;
 async function loadDocs(){
-  const r = await api('/api/documents'); const d = await r.json();
+  const r = await api('/api/documents?count='+DOC_PAGE_SIZE+'&offset='+(docPage*DOC_PAGE_SIZE));
+  const d = await r.json();
+  const rows = d.data || [];
+  if(rows.length===0 && docPage>0){ docPage--; return loadDocs(); }
   const tb = $('docs'); tb.innerHTML='';
-  (d.data||[]).forEach(doc=>{
+  rows.forEach(doc=>{
     const tr=document.createElement('tr');
     const type = doc.is_file ? (doc.content_type||'file') : 'markdown';
     tr.innerHTML = '<td>'+esc(doc.name)+'</td><td>'+esc(doc.book_name)+'</td>'+
@@ -205,13 +215,26 @@ async function loadDocs(){
       '</div></td>';
     tb.appendChild(tr);
   });
+  renderDocPager(d.total || 0);
 }
+function renderDocPager(total){
+  const pg=$('docpager'); if(!pg) return;
+  const pages = Math.max(1, Math.ceil(total/DOC_PAGE_SIZE));
+  const start = total ? docPage*DOC_PAGE_SIZE+1 : 0;
+  const end = Math.min(total, (docPage+1)*DOC_PAGE_SIZE);
+  pg.innerHTML = '<button class="sec" '+(docPage<=0?'disabled':'')+' onclick="docPrev()">&lsaquo; Prev</button>'+
+    '<span style="margin:0 12px;color:var(--muted);font-size:13px">'+start+'&ndash;'+end+' of '+total+' documents</span>'+
+    '<button class="sec" '+(docPage>=pages-1?'disabled':'')+' onclick="docNext()">Next &rsaquo;</button>';
+}
+function docPrev(){ if(docPage>0){ docPage--; loadDocs(); } }
+function docNext(){ docPage++; loadDocs(); }
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 async function view(id){
   const r = await api('/api/pages/'+id); const d = await r.json();
   $('viewtitle').textContent = d.name; $('viewer').innerHTML = d.html || '<em>(no content)</em>';
-  $('viewcard').style.display='block'; window.scrollTo(0, document.body.scrollHeight);
+  $('modal').style.display='flex';
 }
+function closeModal(){ $('modal').style.display='none'; }
 async function downloadDoc(id, el){
   if(el && el.dataset.busy==='1') return;               // block repeat clicks
   const orig = el ? el.innerHTML : '';
@@ -280,7 +303,7 @@ function showView(v){
   else if(v==='tokens'){ show('card-tokens'); }
   else if(v==='settings'){ show('card-settings'); }
   else if(v==='links'){ show('card-links'); }
-  if($('viewcard')) $('viewcard').style.display='none';
+  if($('modal')) $('modal').style.display='none';
   document.querySelectorAll('.navlink').forEach(a=>a.classList.remove('active'));
   const na=$('nav-'+v); if(na) na.classList.add('active');
   if(v==='docs') loadDocs();
@@ -290,6 +313,7 @@ async function init(){
   if(!tok()){ msg('Enter and save an API token to begin (default demo token is pre-filled).', false); return; }
   try{ await loadBooks(); showView('docs'); msg('Ready.', true); }catch(e){}
 }
+document.addEventListener('keydown', e=>{ if(e.key==='Escape' && $('modal')) $('modal').style.display='none'; });
 $('token').value = tok() || 'kb_demo_token_id:kb_demo_token_secret';
 if(!tok()) localStorage.setItem('kb_token', $('token').value);
 init();
