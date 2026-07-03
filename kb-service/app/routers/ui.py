@@ -41,6 +41,15 @@ _PAGE = """<!doctype html>
   pre{background:#0f172a;color:#e2e8f0;padding:10px;border-radius:8px;overflow:auto}
   code{background:#f1f5f9;padding:1px 4px;border-radius:4px}
   a.dl{color:var(--brand);cursor:pointer;text-decoration:underline}
+  .actions{display:flex;gap:6px;flex-wrap:wrap}
+  .ic{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .btn-sm{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:5px 10px;border-radius:7px;border:1px solid var(--line);background:#fff;color:#374151;cursor:pointer;text-decoration:none;transition:all .15s ease;line-height:1;white-space:nowrap}
+  .btn-sm:hover{box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .btn-view:hover{border-color:#2563eb;color:#2563eb;background:#eff6ff}
+  .btn-dl{border-color:#bfdbfe;color:#2563eb;background:#eff6ff}
+  .btn-dl:hover{background:#2563eb;color:#fff;border-color:#2563eb}
+  .btn-del{color:#dc2626;border-color:#fecaca;background:#fef2f2}
+  .btn-del:hover{background:#dc2626;color:#fff;border-color:#dc2626}
 </style>
 </head>
 <body>
@@ -127,6 +136,9 @@ _PAGE = """<!doctype html>
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
+const IC_VIEW='<svg class="ic" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+const IC_DL='<svg class="ic" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+const IC_DEL='<svg class="ic" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
 function tok(){ return localStorage.getItem('kb_token') || ''; }
 function hdr(){ return { 'Authorization': 'Token ' + tok() }; }
 function saveToken(){ localStorage.setItem('kb_token', $('token').value.trim()); msg('Token saved.', true); init(); }
@@ -168,9 +180,11 @@ async function loadDocs(){
     tr.innerHTML = '<td>'+esc(doc.name)+'</td><td>'+esc(doc.book_name)+'</td>'+
       '<td><span class="tag">'+esc(type)+'</span></td><td>'+fmtSize(doc.size)+'</td>'+
       '<td>'+(doc.updated_at||'').slice(0,19).replace('T',' ')+'</td>'+
-      '<td><a class="dl" onclick="view('+doc.id+')">View</a> &middot; '+
-      '<a class="dl" onclick="downloadDoc('+doc.id+', this)">Download</a> &middot; '+
-      '<a class="dl" style="color:#dc2626" onclick="del('+doc.id+')">Delete</a></td>';
+      '<td><div class="actions">'+
+        '<a class="btn-sm btn-view" onclick="view('+doc.id+')">'+IC_VIEW+'View</a>'+
+        '<a class="btn-sm btn-dl" onclick="downloadDoc('+doc.id+', this)">'+IC_DL+'Download</a>'+
+        '<a class="btn-sm btn-del" onclick="del('+doc.id+')">'+IC_DEL+'Delete</a>'+
+      '</div></td>';
     tb.appendChild(tr);
   });
 }
@@ -182,7 +196,7 @@ async function view(id){
 }
 async function downloadDoc(id, el){
   if(el && el.dataset.busy==='1') return;               // block repeat clicks
-  const orig = el ? el.textContent : '';
+  const orig = el ? el.innerHTML : '';
   const setLabel = (t)=>{ if(el) el.textContent = t; };
   if(el){ el.dataset.busy='1'; el.style.pointerEvents='none'; el.style.opacity='0.55'; }
   setLabel('Preparing...');
@@ -209,7 +223,7 @@ async function downloadDoc(id, el){
     setLabel('Downloaded'); msg('Downloaded '+fn, true);
     setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 2000);
   }catch(e){ msg('Download error: '+e, false); }
-  finally{ if(el){ el.dataset.busy='0'; el.style.pointerEvents=''; el.style.opacity=''; setTimeout(()=>setLabel(orig||'Download'), 1500); } }
+  finally{ if(el){ el.dataset.busy='0'; el.style.pointerEvents=''; el.style.opacity=''; const html=orig; setTimeout(function(){ el.innerHTML = html; }, 1200); } }
 }
 async function del(id){
   if(!confirm('Delete this document?')) return;
@@ -223,7 +237,7 @@ async function loadTokens(){
     tr.innerHTML='<td>'+esc(t.name)+'</td><td><code>'+esc(t.token_id)+'</code></td>'+
       '<td>'+(t.created_at||'').slice(0,19).replace('T',' ')+'</td>'+
       '<td>'+(t.is_admin?'yes':'no')+'</td>'+
-      '<td><a class="dl" style="color:#dc2626" onclick="delToken('+t.id+')">Delete</a></td>';
+      '<td><a class="btn-sm btn-del" onclick="delToken('+t.id+')">'+IC_DEL+'Delete</a></td>';
     tb.appendChild(tr); });
 }
 async function createToken(){
