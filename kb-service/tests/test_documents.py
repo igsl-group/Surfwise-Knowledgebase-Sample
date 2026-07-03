@@ -1,4 +1,4 @@
-from tests.conftest import AUTH
+from tests.conftest import AUTH, UI_AUTH
 
 
 async def _first_book_id(client):
@@ -41,6 +41,7 @@ async def test_upload_list_download_delete(client):
 
 
 async def test_ui_served(client):
-    r = await client.get("/ui")
+    assert (await client.get("/ui")).status_code == 401  # requires Basic auth
+    r = await client.get("/ui", headers=UI_AUTH)
     assert r.status_code == 200
     assert "Document Management" in r.text

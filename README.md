@@ -25,6 +25,8 @@ A running instance is available on the internal demo host:
 **Demo API token** (BookStack-style `Authorization: Token <id>:<secret>`):
 `kb_demo_token_id` / `kb_demo_token_secret`
 
+**Admin UI login** (HTTP Basic on `/ui`): `admin` / `surfwise-kb-admin` (override via `KB_UI_USERNAME` / `KB_UI_PASSWORD`).
+
 > The demo host is on an internal/Tailscale network. Served over plain HTTP (demo only);
 > use HTTPS + a dedicated token for real deployments.
 

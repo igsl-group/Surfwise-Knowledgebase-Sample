@@ -17,6 +17,11 @@ TOKEN_ID = "testid"
 TOKEN_SECRET = "testsecret"
 AUTH = {"Authorization": f"Token {TOKEN_ID}:{TOKEN_SECRET}"}
 
+import base64 as _b64
+from app.config import get_settings as _gs
+_s = _gs()
+UI_AUTH = {"Authorization": "Basic " + _b64.b64encode(f"{_s.ui_username}:{_s.ui_password}".encode()).decode()}
+
 
 @pytest_asyncio.fixture
 async def client():

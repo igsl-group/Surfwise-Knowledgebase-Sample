@@ -1,9 +1,10 @@
 """Minimal self-contained web GUI for document management (upload/download/delete)."""
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import HTMLResponse
 
 from app.manual import MANUAL_MD
 from app.markdown_utils import render_html
+from app.security import require_ui_auth
 
 router = APIRouter(tags=["ui"], include_in_schema=False)
 
@@ -254,7 +255,7 @@ init();
 
 
 @router.get("/ui", response_class=HTMLResponse)
-async def ui() -> str:
+async def ui(_: str = Depends(require_ui_auth)) -> str:
     return _PAGE
 
 

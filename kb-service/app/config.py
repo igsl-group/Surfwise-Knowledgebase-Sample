@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     default_token_name: str = "default-demo-token"
     seed_on_startup: bool = True
     max_upload_mb: int = 50
+    # HTTP Basic credentials that gate the admin web UI (/ui)
+    ui_username: str = "admin"
+    ui_password: str = "surfwise-kb-admin"
     log_level: str = "INFO"
 
 

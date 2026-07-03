@@ -50,6 +50,7 @@ and they become searchable/usable by the SurfWise agent. Editing a page bumps it
 | `KB_DEFAULT_TOKEN_ID` / `KB_DEFAULT_TOKEN_SECRET` | demo values | Seeded API token |
 | `KB_PUBLIC_BASE_URL` | `http://localhost:8090` | Human-facing base URL |
 | `KB_SEED_ON_STARTUP` | `true` | Seed token + sample content on boot |
+| `KB_UI_USERNAME` / `KB_UI_PASSWORD` | `admin` / `surfwise-kb-admin` | HTTP Basic login for the `/ui` admin console |
 | `KB_HOST_PORT` (compose) | `8090` | Host port mapping |
 
 ## Content management API (examples)

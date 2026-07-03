@@ -24,6 +24,8 @@ services:
       KB_DEFAULT_TOKEN_ID: ${KB_DEFAULT_TOKEN_ID:-kb_demo_token_id}
       KB_DEFAULT_TOKEN_SECRET: ${KB_DEFAULT_TOKEN_SECRET:-kb_demo_token_secret}
       KB_DEFAULT_TOKEN_NAME: ${KB_DEFAULT_TOKEN_NAME:-default-demo-token}
+      KB_UI_USERNAME: ${KB_UI_USERNAME:-admin}
+      KB_UI_PASSWORD: ${KB_UI_PASSWORD:-surfwise-kb-admin}
       KB_SEED_ON_STARTUP: "true"
     ports:
       - "${KB_HOST_PORT:-8090}:8080"
