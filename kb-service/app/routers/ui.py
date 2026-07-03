@@ -2,6 +2,9 @@
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 
+from app.manual import MANUAL_MD
+from app.markdown_utils import render_html
+
 router = APIRouter(tags=["ui"], include_in_schema=False)
 
 _PAGE = """<!doctype html>
@@ -43,6 +46,7 @@ _PAGE = """<!doctype html>
 <header>
   <h1>Knowledge Base &mdash; Document Management</h1>
   <small>Upload, download and delete documents. Content is indexable by SurfWise via the BookStack-compatible API.</small>
+  <div style="margin-top:8px;font-size:13px"><a href="/manual" target="_blank" style="color:#93c5fd;font-weight:600">&#128214; How to connect this KB to SurfWise (Admin Guide)</a> &nbsp;&middot;&nbsp; <a href="/docs" target="_blank" style="color:#93c5fd">API docs</a></div>
 </header>
 <main>
   <div class="card">
@@ -209,3 +213,27 @@ init();
 @router.get("/ui", response_class=HTMLResponse)
 async def ui() -> str:
     return _PAGE
+
+
+_MANUAL_TEMPLATE = """<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Connect to SurfWise - Admin Guide</title>
+<style>
+ body{margin:0;font:15px/1.6 system-ui,Segoe UI,Roboto,sans-serif;color:#1f2937;background:#f8fafc}
+ .wrap{max-width:820px;margin:0 auto;padding:24px 18px}
+ .bar{background:#0f172a;color:#fff;padding:12px 18px}
+ .bar a{color:#93c5fd;text-decoration:none}
+ h1{font-size:24px}h2{margin-top:1.6em;border-bottom:1px solid #e5e7eb;padding-bottom:4px}
+ code{background:#f1f5f9;padding:1px 5px;border-radius:4px}
+ pre{background:#0f172a;color:#e2e8f0;padding:12px;border-radius:8px;overflow:auto}
+ pre code{background:none;color:inherit;padding:0}
+ table{border-collapse:collapse;width:100%}th,td{border:1px solid #e5e7eb;padding:8px;text-align:left}
+ th{background:#f1f5f9}
+</style></head><body>
+<div class="bar"><a href="/ui">&larr; Back to Knowledge Base</a></div>
+<div class="wrap">__BODY__</div></body></html>"""
+
+
+@router.get("/manual", response_class=HTMLResponse)
+async def manual() -> str:
+    return _MANUAL_TEMPLATE.replace("__BODY__", render_html(MANUAL_MD))
