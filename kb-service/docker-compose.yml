@@ -1,0 +1,36 @@
+name: surfwise-kb
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: kb
+      POSTGRES_PASSWORD: kb
+      POSTGRES_DB: kb
+    volumes:
+      - kb_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kb -d kb"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+
+  kb:
+    build: .
+    environment:
+      KB_DATABASE_URL: postgresql+asyncpg://kb:kb@db:5432/kb
+      KB_PUBLIC_BASE_URL: ${KB_PUBLIC_BASE_URL:-http://localhost:8090}
+      KB_DEFAULT_TOKEN_ID: ${KB_DEFAULT_TOKEN_ID:-kb_demo_token_id}
+      KB_DEFAULT_TOKEN_SECRET: ${KB_DEFAULT_TOKEN_SECRET:-kb_demo_token_secret}
+      KB_DEFAULT_TOKEN_NAME: ${KB_DEFAULT_TOKEN_NAME:-default-demo-token}
+      KB_SEED_ON_STARTUP: "true"
+    ports:
+      - "${KB_HOST_PORT:-8090}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  kb_pg:
