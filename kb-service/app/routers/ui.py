@@ -146,7 +146,7 @@ async function loadDocs(){
       '<td><span class="tag">'+esc(type)+'</span></td><td>'+fmtSize(doc.size)+'</td>'+
       '<td>'+(doc.updated_at||'').slice(0,19).replace('T',' ')+'</td>'+
       '<td><a class="dl" onclick="view('+doc.id+')">View</a> &middot; '+
-      '<a class="dl" onclick="download('+doc.id+')">Download</a> &middot; '+
+      '<a class="dl" onclick="downloadDoc('+doc.id+')">Download</a> &middot; '+
       '<a class="dl" style="color:#dc2626" onclick="del('+doc.id+')">Delete</a></td>';
     tb.appendChild(tr);
   });
@@ -157,7 +157,7 @@ async function view(id){
   $('viewtitle').textContent = d.name; $('viewer').innerHTML = d.html || '<em>(no content)</em>';
   $('viewcard').style.display='block'; window.scrollTo(0, document.body.scrollHeight);
 }
-async function download(id){
+async function downloadDoc(id){
   const r = await api('/api/documents/'+id+'/download');
   if(!r.ok){ msg('Download failed: '+r.status, false); return; }
   const cd = r.headers.get('Content-Disposition')||''; let fn='document';
