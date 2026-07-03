@@ -60,11 +60,11 @@ _PAGE = """<!doctype html>
 <header>
   <h1>Knowledge Base &mdash; Document Management</h1>
   <small>Upload, download and delete documents. Content is indexable by SurfWise via the BookStack-compatible API.</small>
-  <div style="margin-top:8px;font-size:13px"><a href="/manual" target="_blank" style="color:#93c5fd;font-weight:600">&#128214; How to connect this KB to SurfWise (Admin Guide)</a> &nbsp;&middot;&nbsp; <a href="/docs" target="_blank" style="color:#93c5fd">API docs</a> &nbsp;&middot;&nbsp; <a href="https://github.com/igsl-group/Surfwise-Knowledgebase-Sample" target="_blank" style="color:#93c5fd">GitHub repo</a></div>
 </header>
 <nav class="nav">
   <a class="navlink" id="nav-docs" onclick="showView('docs')">Documents</a>
   <a class="navlink" id="nav-tokens" onclick="showView('tokens')">API Tokens</a>
+  <a class="navlink" id="nav-links" onclick="showView('links')">Docs</a>
   <a class="navlink" id="nav-settings" onclick="showView('settings')">Settings</a>
 </nav>
 <main>
@@ -133,6 +133,15 @@ _PAGE = """<!doctype html>
       <thead><tr><th>Name</th><th>Token ID</th><th>Created</th><th>Admin</th><th>Actions</th></tr></thead>
       <tbody id="toks"></tbody>
     </table>
+  </div>
+
+  <div class="card" id="card-links">
+    <div class="row" style="justify-content:space-between"><strong>Documentation &amp; Links</strong></div>
+    <ul style="line-height:2.1;margin:10px 0 0;padding-left:18px">
+      <li><a href="/manual" target="_blank" style="color:var(--brand);font-weight:600">&#128214; How to connect this KB to SurfWise (Admin Guide)</a></li>
+      <li><a href="/docs" target="_blank" style="color:var(--brand)">API docs (Swagger)</a></li>
+      <li><a href="https://github.com/igsl-group/Surfwise-Knowledgebase-Sample" target="_blank" style="color:var(--brand)">GitHub repo</a></li>
+    </ul>
   </div>
 
   <div class="card" id="viewcard" style="display:none">
@@ -265,11 +274,12 @@ async function delToken(id){
   else { const e=await r.text(); msg('Delete failed: '+r.status+' '+e, false); }
 }
 function showView(v){
-  ['card-settings','card-upload','card-docs','card-tokens'].forEach(id=>{ const e=$(id); if(e) e.style.display='none'; });
+  ['card-settings','card-upload','card-docs','card-tokens','card-links'].forEach(id=>{ const e=$(id); if(e) e.style.display='none'; });
   const show=(id)=>{ const e=$(id); if(e) e.style.display=''; };
   if(v==='docs'){ show('card-upload'); show('card-docs'); }
   else if(v==='tokens'){ show('card-tokens'); }
   else if(v==='settings'){ show('card-settings'); }
+  else if(v==='links'){ show('card-links'); }
   if($('viewcard')) $('viewcard').style.display='none';
   document.querySelectorAll('.navlink').forEach(a=>a.classList.remove('active'));
   const na=$('nav-'+v); if(na) na.classList.add('active');
