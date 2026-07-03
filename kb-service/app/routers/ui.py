@@ -146,7 +146,7 @@ async function loadDocs(){
       '<td><span class="tag">'+esc(type)+'</span></td><td>'+fmtSize(doc.size)+'</td>'+
       '<td>'+(doc.updated_at||'').slice(0,19).replace('T',' ')+'</td>'+
       '<td><a class="dl" onclick="view('+doc.id+')">View</a> &middot; '+
-      '<a class="dl" onclick="downloadDoc('+doc.id+')">Download</a> &middot; '+
+      '<a class="dl" onclick="downloadDoc('+doc.id+', this)">Download</a> &middot; '+
       '<a class="dl" style="color:#dc2626" onclick="del('+doc.id+')">Delete</a></td>';
     tb.appendChild(tr);
   });
@@ -157,16 +157,36 @@ async function view(id){
   $('viewtitle').textContent = d.name; $('viewer').innerHTML = d.html || '<em>(no content)</em>';
   $('viewcard').style.display='block'; window.scrollTo(0, document.body.scrollHeight);
 }
-async function downloadDoc(id){
-  const r = await api('/api/documents/'+id+'/download');
-  if(!r.ok){ msg('Download failed: '+r.status, false); return; }
-  let fn='document';
-  const cd = r.headers.get('Content-Disposition')||'';
-  let m = cd.match(/filename[*]=UTF-8''([^;]+)/i);
-  if(m){ try{ fn=decodeURIComponent(m[1]); }catch(e){ fn=m[1]; } }
-  else { m = cd.match(/filename="?([^";]+)"?/i); if(m) fn=m[1]; }
-  const blob = await r.blob(); const url = URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download=fn; a.style.display='none'; document.body.appendChild(a); a.click(); msg('Downloaded '+fn, true); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 2000);
+async function downloadDoc(id, el){
+  if(el && el.dataset.busy==='1') return;               // block repeat clicks
+  const orig = el ? el.textContent : '';
+  const setLabel = (t)=>{ if(el) el.textContent = t; };
+  if(el){ el.dataset.busy='1'; el.style.pointerEvents='none'; el.style.opacity='0.55'; }
+  setLabel('Preparing...');
+  try{
+    const r = await api('/api/documents/'+id+'/download');
+    if(!r.ok){ msg('Download failed: '+r.status, false); return; }
+    let fn='document';
+    const cd = r.headers.get('Content-Disposition')||'';
+    let m = cd.match(/filename[*]=UTF-8''([^;]+)/i);
+    if(m){ try{ fn=decodeURIComponent(m[1]); }catch(e){ fn=m[1]; } }
+    else { m = cd.match(/filename="?([^";]+)"?/i); if(m) fn=m[1]; }
+    const total = parseInt(r.headers.get('Content-Length')||'0', 10);
+    let blob;
+    if(r.body && r.body.getReader){
+      const reader = r.body.getReader(); const chunks=[]; let got=0;
+      while(true){ const s = await reader.read(); if(s.done) break; chunks.push(s.value); got += s.value.length;
+        setLabel(total ? ('Downloading '+Math.floor(got*100/total)+'%')
+                       : ('Downloading '+(got/1048576).toFixed(1)+'MB')); }
+      blob = new Blob(chunks);
+    } else { blob = await r.blob(); }
+    const url = URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=fn; a.style.display='none';
+    document.body.appendChild(a); a.click();
+    setLabel('Downloaded'); msg('Downloaded '+fn, true);
+    setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 2000);
+  }catch(e){ msg('Download error: '+e, false); }
+  finally{ if(el){ el.dataset.busy='0'; el.style.pointerEvents=''; el.style.opacity=''; setTimeout(()=>setLabel(orig||'Download'), 1500); } }
 }
 async function del(id){
   if(!confirm('Delete this document?')) return;
